@@ -15,13 +15,13 @@ agDf=activeGene(bwPlus,bwMinus,bed,tssWin=100)
 
 #This is named tssWin, but it needs to be changed to denWin
 tssWin = 100
-denWin = 100
+denWin = 200
 top.num.peaks = 20
 clustered.peak.distance = 5
 low.limit.tss.counts = 3
 
 #agDf.stored = agDf
-                                        #agDf = agDf[agDf$gene == 'HSP90B1',]
+                                        #agDf = agDf[agDf$gene == 'APPL2',]
                                         #agDf = agDf[1:500,]
 
                                         #for each gene I would like the following for the top 20 peaks
@@ -50,7 +50,8 @@ add.to.fill <- function(orig.df, df.filler, dense.u.d, counter, line.num, top.in
 }
 
 add.to.fill.minus <- function(orig.df, df.filler, dense.u.d, counter, line.num, top.index, IDX, vector.signal) {
-    df.filler[counter, 3] = attr(vector.signal, 'end') - top.index[IDX]
+    print(top.index)
+    df.filler[counter, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
     df.filler[,1] = orig.df[line.num, 1]
     df.filler[,2] = attr(vector.signal, 'chrom')
     df.filler[,4] = orig.df[line.num, 5]  
@@ -235,7 +236,7 @@ for (i in 1:nrow(agDf)) {
     }
     else if (agDf$strand[i] == '-') {
         strand.value = '-'
-        vec.values = step.bpQuery.bigWig(bwPlus, agDf$chrom[i], agDf$start[i] - tssWin,
+        vec.values = step.bpQuery.bigWig(bwMinus, agDf$chrom[i], agDf$start[i] - tssWin,
                                          agDf$end[i] +tssWin, step = 1, strand = '-', with.attributes = TRUE)
         len.vec.values = length(vec.values)
         subset.len = len.vec.values - top.num.peaks
@@ -245,7 +246,7 @@ for (i in 1:nrow(agDf)) {
                                         #default to the upstream most TSS
         if (length(top.20.index) == 0) {
             count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vec.values, 'end') - tssWin
+            df.fill[count.1, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
             df.fill[,4] = agDf[i, 5]  
@@ -255,7 +256,7 @@ for (i in 1:nrow(agDf)) {
         }
         else if (min(vec.values[top.20.index]) < low.limit.tss.counts) {
             count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vec.values, 'end') - tssWin
+            df.fill[count.1, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
             df.fill[,4] = agDf[i, 5]  
@@ -264,7 +265,7 @@ for (i in 1:nrow(agDf)) {
             df.fill[count.1, 7] = NA
         }
         else if (length(top.20.index) == 1) {
-            den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
+            den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
             #simply swap the up and down logical operator (less than to greater than)
             if (den[[1]] > den[[2]]) {
                 count.1 = count.1 + 1
@@ -276,7 +277,7 @@ for (i in 1:nrow(agDf)) {
             if (abs(top.20.index[2] - top.20.index[1]) >= denWin) {
                 for (j in 1:2) {
                                         #mappability not yet incorporated
-                    den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, denWin)
+                    den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, j, denWin)
                     if (den[[1]] > den[[2]]) {
                         count.1 = count.1 + 1
                         df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
@@ -288,7 +289,7 @@ for (i in 1:nrow(agDf)) {
                 if (newWin > clustered.peak.distance) {
                     for (j in 1:2) {
 #mappability not yet incorporated
-                        den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, newWin)
+                        den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, j, newWin)
                         if (den[[1]] > den[[2]]) {
                             count.1 = count.1 + 1
                             df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
@@ -297,7 +298,7 @@ for (i in 1:nrow(agDf)) {
                 } else {
                     for (j in 1:2) {
 #mappability not yet incorporated
-                        den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, clustered.peak.distance)
+                        den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, j, clustered.peak.distance)
                         count.1 = count.1 + 1
                         df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
                     }
@@ -307,7 +308,7 @@ for (i in 1:nrow(agDf)) {
         else if (length(top.20.index) > 2) {
             if (abs(top.20.index[2] - top.20.index[1]) >= denWin) {
 #mappability not yet incorporated
-                den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
+                den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
                 if (den[[1]] > den[[2]]) {
                     count.1 = count.1 + 1
                     df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
@@ -316,13 +317,13 @@ for (i in 1:nrow(agDf)) {
                 newWin = abs(top.20.index[2] - top.20.index[1])
                 if (newWin > clustered.peak.distance) {
 #mappability not yet incorporated
-                    den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, newWin)
+                    den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, 1, newWin)
                     if (den[[1]] > den[[2]]) {
                         count.1 = count.1 + 1
                         df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                     }
                 } else {
-                    den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, clustered.peak.distance)
+                    den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, 1, clustered.peak.distance)
                     count.1 = count.1 + 1
                     df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                 }
@@ -331,7 +332,7 @@ for (i in 1:nrow(agDf)) {
             for (j in 2:(length(top.20.index)-1)) {
                 if (abs(top.20.index[j] - top.20.index[j-1])  >= denWin & abs(top.20.index[j] - top.20.index[j+1]) >= denWin) {
 #mappability not yet incorporated
-                    den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, denWin)
+                    den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, j, denWin)
                     if (den[[1]] > den[[2]]) {
                         count.1 = count.1 + 1
                         df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
@@ -340,14 +341,14 @@ for (i in 1:nrow(agDf)) {
                 else if (!(abs(top.20.index[j] - top.20.index[j-1])  >= denWin & abs(top.20.index[j] - top.20.index[j+1]) >= denWin)) {
                     newWin = min(c(abs(top.20.index[j-1] - top.20.index[j]), abs(top.20.index[j+1] - top.20.index[j])))
                     if (newWin > clustered.peak.distance) {
-                        den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, newWin)
+                        den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, j, newWin)
                         if (den[[1]] > den[[2]]) {
                             count.1 = count.1 + 1
                             df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
                         }
                     } else {
                         count.1 = count.1 + 1
-                        den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, clustered.peak.distance)
+                        den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, j, clustered.peak.distance)
                         df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values) 
                     }
                 }
@@ -355,7 +356,7 @@ for (i in 1:nrow(agDf)) {
 #THE LAST ENTRY IN THE VECTOR ONLY HAS ONE NEIGHBOR, SO TREAT THIS SPECIAL CASE
             if (abs(top.20.index[length(top.20.index)-1] - top.20.index[length(top.20.index)]) >= denWin) {
 #mappability not yet incorporated
-                den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), denWin)
+                den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), denWin)
                 if (den[[1]] > den[[2]]) {
                     count.1 = count.1 + 1
                     df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values) 
@@ -364,13 +365,13 @@ for (i in 1:nrow(agDf)) {
             if (abs(top.20.index[length(top.20.index)-1] - top.20.index[length(top.20.index)]) < denWin) {
                 newWin = top.20.index[2] - top.20.index[1]
                 if (newWin > clustered.peak.distance) {
-                    den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), newWin)
+                    den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), newWin)
                     if (den[[1]] > den[[2]]) {
                         count.1 = count.1 + 1
                         df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values) 
                     }
                 } else {
-                    den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), clustered.peak.distance)
+                    den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), clustered.peak.distance)
                     count.1 = count.1 + 1
                     df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values) 
                 }
@@ -389,7 +390,7 @@ for (i in 1:nrow(agDf)) {
             df.fill[1, 7] = NA
     }
     else if (nrow(df.fill) == 0 & strand.value == '-') {                                    #if these
-            df.fill[1, 3] = attr(vec.values, 'end') - tssWin
+            df.fill[1, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
             df.fill[,4] = agDf[i, 5]  
@@ -410,7 +411,7 @@ dt
 df.fill.out[1:100,]
 
 #PRDM16
-
+#APPL2
 #stop here
 
 
