@@ -50,7 +50,7 @@ add.to.fill <- function(orig.df, df.filler, dense.u.d, counter, line.num, top.in
 }
 
 add.to.fill.minus <- function(orig.df, df.filler, dense.u.d, counter, line.num, top.index, IDX, vector.signal) {
-    print(top.index)
+#    print(top.index)
     df.filler[counter, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
     df.filler[,1] = orig.df[line.num, 1]
     df.filler[,2] = attr(vector.signal, 'chrom')
@@ -65,11 +65,7 @@ t0=Sys.time()
 count = 0
 df.fill.out = data.frame(matrix(ncol = 7, nrow = 0))
 
-
-
-
-
-                                        #strictly possible that of the top 20 peaks none have a higher density dealing with that now
+                      #strictly possible that of the top 20 peaks none have a higher density dealing with that now
 
 
 for (i in 1:nrow(agDf)) {
@@ -246,7 +242,7 @@ for (i in 1:nrow(agDf)) {
                                         #default to the upstream most TSS
         if (length(top.20.index) == 0) {
             count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
+            df.fill[count.1, 3] = attr(vec.values, 'end') - tssWin
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
             df.fill[,4] = agDf[i, 5]  
@@ -256,7 +252,7 @@ for (i in 1:nrow(agDf)) {
         }
         else if (min(vec.values[top.20.index]) < low.limit.tss.counts) {
             count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
+            df.fill[count.1, 3] = attr(vec.values, 'end') - tssWin
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
             df.fill[,4] = agDf[i, 5]  
@@ -380,7 +376,7 @@ for (i in 1:nrow(agDf)) {
     }
 #this deals with issues where there is no entry for a gene, defaults to upstream most TSS    
     if (nrow(df.fill) == 0 & strand.value == '+') {
-            print(attr(vec.values, 'start'))                           #if these
+            #print(attr(vec.values, 'start'))                           #if these
             df.fill[1, 3] = attr(vec.values, 'start') + tssWin
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
@@ -390,7 +386,7 @@ for (i in 1:nrow(agDf)) {
             df.fill[1, 7] = NA
     }
     else if (nrow(df.fill) == 0 & strand.value == '-') {                                    #if these
-            df.fill[1, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
+            df.fill[1, 3] = attr(vec.values, 'end') - tssWin
             df.fill[,1] = agDf[i, 1]
             df.fill[,2] = attr(vec.values, 'chrom')
             df.fill[,4] = agDf[i, 5]  
