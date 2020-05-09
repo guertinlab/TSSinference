@@ -28,17 +28,11 @@ density.up.down <- function(bw, chr.val, vector.signal, strand.val, top.index, I
     upDen = sum(step.bpQuery.bigWig(bw, chr.val, attr(vector.signal, 'start') + top.index[INDX] - half.window,
                                     attr(vec.values, 'start') + top.index[INDX] - 1,
                                     step = 1, strand = '+', with.attributes = TRUE))/(half.window-1)
-#    if (length(step.bpQuery.bigWig(bw, chr.val, attr(vector.signal, 'start') + top.index[INDX] - half.window,
-#                                    attr(vec.values, 'start') + top.index[INDX] - 1,
-#                                   step = 1, strand = '+', with.attributes = TRUE)) > half.window) {
-#        print(chr.val)
-#        print(attr(vector.signal, 'start'))}
+
     downDen = sum(step.bpQuery.bigWig(bw, chr.val, attr(vector.signal, 'start') + top.index[INDX],
                                       attr(vector.signal, 'start') + top.index[INDX] + half.window -1,
                                       step = 1, strand = strand.val, with.attributes = TRUE))/(half.window-1)
-#    print(length(step.bpQuery.bigWig(bw, chr.val, attr(vector.signal, 'start') + top.index[INDX],
-#                                      attr(vector.signal, 'start') + top.index[INDX] + half.window -1,
-#                                      step = 1, strand = strand.val, with.attributes = TRUE)))
+
     return(list(upDen, downDen))
 }
 
@@ -54,7 +48,6 @@ add.to.fill <- function(orig.df, df.filler, dense.u.d, counter, line.num, top.in
 }
 
 add.to.fill.minus <- function(orig.df, df.filler, dense.u.d, counter, line.num, top.index, IDX, vector.signal) {
-#    print(top.index)
     df.filler[counter, 3] = attr(vector.signal, 'end') - (length(vector.signal) - top.index[IDX])
     df.filler[,1] = orig.df[line.num, 1]
     df.filler[,2] = attr(vector.signal, 'chrom')
@@ -70,7 +63,7 @@ t0=Sys.time()
 
 #funtion arguments
 tssWin = 100
-denWin = 200 #not inclusive in the calcualtion, so this woudl be 199
+denWin = 200 #not inclusive in the calculation, so this woudl be 199
 top.num.peaks = 20
 clustered.peak.distance = 5
 low.limit.tss.counts = 3
@@ -79,7 +72,7 @@ low.limit.tss.counts = 3
 #would be where the function starts
 count = 0
 df.fill.out = data.frame(matrix(ncol = 7, nrow = 0))
-denWin = denWin + 1 #this to get a window that is consistent with the user's intention without hte need to change density.up.down
+denWin = denWin + 1 #this to get a window that is consistent with the user's intention without the need to change density.up.down
 clustered.peak.distance = clustered.peak.distance +1 #this to get a window that is consistent with the user's intention without hte need to change density.up.down
 
 for (i in 1:nrow(agDf)) {
@@ -95,40 +88,15 @@ for (i in 1:nrow(agDf)) {
         subset.len = len.vec.values - top.num.peaks
         sort.sub = sort(vec.values, partial=subset.len)[subset.len]
         top.20.index = which(vec.values > sort.sub)
+        top.20.index = top.20.index[vec.values[top.20.index] >= low.limit.tss.counts]
         chr.value = attr(vec.values, 'chrom')
-#default to the upstream most TSS
-#test case was TMEM88B and this is working as intended
-        if (length(top.20.index) == 0) {
-            count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vec.values, 'start') + tssWin
-            df.fill[,1] = agDf[i, 1]
-            df.fill[,2] = attr(vec.values, 'chrom')
-            df.fill[,4] = agDf[i, 5]  
-            df.fill[count.1, 5] = NA
-            df.fill[count.1, 6] = NA
-            df.fill[count.1, 7] = NA
-        }
-#default to the upstream most TSS
-#test case was  OR4F5 and statement is working as intended
-        else if (min(vec.values[top.20.index]) < low.limit.tss.counts) {
-            count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vec.values, 'start') + tssWin
-            df.fill[,1] = agDf[i, 1]
-            df.fill[,2] = attr(vec.values, 'chrom')
-            df.fill[,4] = agDf[i, 5]  
-            df.fill[count.1, 5] = NA
-            df.fill[count.1, 6] = NA
-            df.fill[count.1, 7] = NA
-        }
 #deal with list lengths of 1 differently because there are no neighbors
-#If the density is higher downstream then we can call it the TSS, this is probably rare.
 #test case is ALPL. although this is not the correct TSS with default parameters, the statement is working as intended
-        else if (length(top.20.index) == 1) {
+        if (length(top.20.index) == 1) {
             den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
             if (den[[1]] < den[[2]]) {
                 count.1 = count.1 + 1
                 df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
-                
             }
         }
 #something needs to be doen if the densisities are not < and greater than  
@@ -146,7 +114,7 @@ for (i in 1:nrow(agDf)) {
                     }
                 }
             }
-            else if (abs(top.20.index[2] - top.20.index[1]) < denWin) {
+            else {
 #test case was SPRY1. This is a nice example where that annotated TSS is picked up
 #There is an alternative TSS that is not picked up
 #the density calculation was including the downstream peak, so I modififed the function.                
@@ -187,7 +155,6 @@ for (i in 1:nrow(agDf)) {
                     count.1 = count.1 + 1
                     df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                 }
-
             } else {
                 newWin = abs(top.20.index[2] - top.20.index[1])
                 if (newWin > clustered.peak.distance) {
@@ -198,14 +165,12 @@ for (i in 1:nrow(agDf)) {
                         count.1 = count.1 + 1
                         df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                     }
-                    
                 }
                 else {
 #PLEKHN1 is a test case and identifies a new confident TSS                    
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, clustered.peak.distance)
                     count.1 = count.1 + 1
                     df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
-
                 }
             }
 #all internal indicies have two neighbors
@@ -260,8 +225,6 @@ for (i in 1:nrow(agDf)) {
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), clustered.peak.distance)
                     count.1 = count.1 + 1
                     df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values)
-                    print(df.fill)
-                    break
                 }
             }     
         }
@@ -275,29 +238,10 @@ for (i in 1:nrow(agDf)) {
         subset.len = len.vec.values - top.num.peaks
         sort.sub = sort(vec.values, partial=subset.len)[subset.len]
         top.20.index = which(vec.values > sort.sub)
+        top.20.index = top.20.index[vec.values[top.20.index] >= low.limit.tss.counts]
         chr.value = attr(vec.values, 'chrom')
-                                        #default to the upstream most TSS
-        if (length(top.20.index) == 0) {
-            count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vec.values, 'end') - tssWin
-            df.fill[,1] = agDf[i, 1]
-            df.fill[,2] = attr(vec.values, 'chrom')
-            df.fill[,4] = agDf[i, 5]  
-            df.fill[count.1, 5] = NA
-            df.fill[count.1, 6] = NA
-            df.fill[count.1, 7] = NA
-        }
-        else if (min(vec.values[top.20.index]) < low.limit.tss.counts) {
-            count.1 = count.1 + 1
-            df.fill[count.1, 3] = attr(vec.values, 'end') - tssWin
-            df.fill[,1] = agDf[i, 1]
-            df.fill[,2] = attr(vec.values, 'chrom')
-            df.fill[,4] = agDf[i, 5]  
-            df.fill[count.1, 5] = NA
-            df.fill[count.1, 6] = NA
-            df.fill[count.1, 7] = NA
-        }
-        else if (length(top.20.index) == 1) {
+        
+        if (length(top.20.index) == 1) {
             den = density.up.down(bwMinus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
             #simply swap the up and down logical operator (less than to greater than)
             if (den[[1]] > den[[2]]) {
@@ -346,7 +290,7 @@ for (i in 1:nrow(agDf)) {
                     count.1 = count.1 + 1
                     df.fill = add.to.fill.minus(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                 }
-            } else if (abs(top.20.index[2] - top.20.index[1]) < denWin){
+            } else {
                 newWin = abs(top.20.index[2] - top.20.index[1])
                 if (newWin > clustered.peak.distance) {
 #mappability not yet incorporated
@@ -431,9 +375,6 @@ for (i in 1:nrow(agDf)) {
             df.fill[1, 6] = NA
             df.fill[1, 7] = NA
     }
-    if (denWin != 201) {print(denWin)}
-    if (clustered.peak.distance != 6) {print('clustered peak'); print(clustered.peak.distance)}
-    if (newWin > 201) {print('newWin'); print(newWin)}
     df.fill.out = rbind(df.fill.out, df.fill)
 }
 
