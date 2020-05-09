@@ -80,6 +80,8 @@ low.limit.tss.counts = 3
 count = 0
 df.fill.out = data.frame(matrix(ncol = 7, nrow = 0))
 denWin = denWin + 1 #this to get a window that is consistent with the user's intention without hte need to change density.up.down
+clustered.peak.distance = clustered.peak.distance +1 #this to get a window that is consistent with the user's intention without hte need to change density.up.down
+
 for (i in 1:nrow(agDf)) {
     df.fill = data.frame(matrix(ncol = 7, nrow = 0))
     colnames(df.fill) = c('gene', 'chr', 'peak', 'strand', 'up', 'down', 'height') 
@@ -164,24 +166,20 @@ for (i in 1:nrow(agDf)) {
 #FOR NOW I WANT TO WRITE SOMETHING THAT JUST LEAVES all these CLUSTERED CLOSE PEAKS IN THE DATA FRAME REGARDLESS OF UP AND DOWN DENSITIES
 #MAYBE A USER_IDENTIFIED VALUE FOR THIS (clustered.peak.distance). IF THE PEAKS ARE CLOSER THAN 5 BASES from EACH Other, then WE CAN keep THEM all
 #AND CALCULATE density in the user-defined clustered.peak.distance
-                                        #THIS SPECIAL CASE NEEDS TO BE APPLIED TO OTHER SMALL DISTANCES
-                    #TMEM151A is the test case. this find a few new TSS within short distances from one another. 
+#THIS SPECIAL CASE NEEDS TO BE APPLIED TO OTHER SMALL DISTANCES
+#TMEM151A is the test case. this find a few new TSS within short distances from one another. 
                     for (j in 1:2) {
 #mappability not yet incorporated
                         den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, clustered.peak.distance)
                         count.1 = count.1 + 1
-                        print(agDf[i,1])
-                        print(den[[1]])
-                        print(den[[2]])
                         df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
                     }
-                    print(df.fill)
-                    break
                 }
             }
         }
 #if vector greater than two the first instance needs special attention because there is only one neighbor            
         else if (length(top.20.index) > 2) {
+#FHAD1 is a test case and a novel confident TSS
             if (abs(top.20.index[2] - top.20.index[1]) >= denWin) {
 #mappability not yet incorporated
                 den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, denWin)
@@ -189,19 +187,25 @@ for (i in 1:nrow(agDf)) {
                     count.1 = count.1 + 1
                     df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                 }
-            } else if (abs(top.20.index[2] - top.20.index[1]) < denWin){
+
+            } else {
                 newWin = abs(top.20.index[2] - top.20.index[1])
                 if (newWin > clustered.peak.distance) {
+# test case  KLHL17
 #mappability not yet incorporated
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, newWin)
                     if (den[[1]] < den[[2]]) {
                         count.1 = count.1 + 1
                         df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
                     }
-                } else {
+                    
+                }
+                else {
+#PLEKHN1 is a test case and identifies a new confident TSS                    
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, 1, clustered.peak.distance)
                     count.1 = count.1 + 1
                     df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, 1, vec.values)
+
                 }
             }
 #all internal indicies have two neighbors
@@ -210,23 +214,25 @@ for (i in 1:nrow(agDf)) {
 #mappability not yet incorporated
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, denWin)
                     if (den[[1]] < den[[2]]) {
+#ESPN is a test case
                         count.1 = count.1 + 1
                         df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
                     }
                 }
-                else if (!(abs(top.20.index[j] - top.20.index[j-1])  >= denWin & abs(top.20.index[j] - top.20.index[j+1]) >= denWin)) {
+                else {
                     newWin = min(c(abs(top.20.index[j-1] - top.20.index[j]), abs(top.20.index[j+1] - top.20.index[j])))
-#                    if (newWin > 200) {print('newWin'); print(newWin)}
                     if (newWin > clustered.peak.distance) {
                         den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, newWin)
                         if (den[[1]] < den[[2]]) {
+  #B3GALT6
                             count.1 = count.1 + 1
                             df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
                         }
                     } else {
+#KLHL17 example again
                         count.1 = count.1 + 1
                         den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, j, clustered.peak.distance)
-                        df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values) 
+                        df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, j, vec.values)
                     }
                 }
             }
@@ -235,6 +241,7 @@ for (i in 1:nrow(agDf)) {
 #mappability not yet incorporated
                 den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), denWin)
                 if (den[[1]] < den[[2]]) {
+#PRKCZ                     
                     count.1 = count.1 + 1
                     df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values) 
                 }
@@ -244,17 +251,22 @@ for (i in 1:nrow(agDf)) {
                 if (newWin > clustered.peak.distance) {
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), newWin)
                     if (den[[1]] < den[[2]]) {
+#PHF13                        
                         count.1 = count.1 + 1
-                        df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values) 
+                        df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values)
                     }
                 } else {
+#ISG15
                     den = density.up.down(bwPlus, chr.value, vec.values, strand.value, top.20.index, length(top.20.index), clustered.peak.distance)
                     count.1 = count.1 + 1
-                    df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values) 
+                    df.fill = add.to.fill(agDf, df.fill, den, count.1, i, top.20.index, length(top.20.index), vec.values)
+                    print(df.fill)
+                    break
                 }
             }     
         }
     }
+#STOPPED HERE ON MAY 9, 2020    
     else if (agDf$strand[i] == '-') {
         strand.value = '-'
         vec.values = step.bpQuery.bigWig(bwMinus, agDf$chrom[i], agDf$start[i] - tssWin,
@@ -419,9 +431,9 @@ for (i in 1:nrow(agDf)) {
             df.fill[1, 6] = NA
             df.fill[1, 7] = NA
     }
-    if (denWin != 200) {print(denWin)}
-    if (clustered.peak.distance != 5) {print('clustered peak'); print(clustered.peak.distance)}
-    if (newWin > 200) {print('newWin'); print(newWin)}
+    if (denWin != 201) {print(denWin)}
+    if (clustered.peak.distance != 6) {print('clustered peak'); print(clustered.peak.distance)}
+    if (newWin > 201) {print('newWin'); print(newWin)}
     df.fill.out = rbind(df.fill.out, df.fill)
 }
 
