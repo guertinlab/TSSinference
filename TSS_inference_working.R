@@ -26,7 +26,7 @@ agDf=activeGene(bwPlus,bwMinus,bed,tssWin=100)
 
 density.up.down <- function(bw, chr.val, vector.signal, strand.val, top.index, INDX, half.window ){
     upDen = sum(step.bpQuery.bigWig(bw, chr.val, attr(vector.signal, 'start') + top.index[INDX] - half.window,
-                                    attr(vec.values, 'start') + top.index[INDX] - 1,
+                                    attr(vec.signal, 'start') + top.index[INDX] - 1,
                                     step = 1, strand = '+', with.attributes = TRUE))/(half.window-1)
 
     downDen = sum(step.bpQuery.bigWig(bw, chr.val, attr(vector.signal, 'start') + top.index[INDX],
