@@ -150,12 +150,11 @@ seqOutBias hg38.fa ${pluspe2files} --no-scale --bw=${cellline}_PE2_combined_pro_
 
 #mappability
 
-#this file is generated during a seqOutBias run with a 38mer: hg38.tal_38.gtTxt.gz
+#this file is generated during a seqOutBias run: hg38.tal_30.gtTxt.gz
 #code from https://github.com/andrelmartins/bigWig/tree/master/calc_mappability
 
 SEQNAMES=`gzcat hg38.fa.gz | grep ">" | sed "s/^>//g"`
-
-gzcat hg38.tal_38.gtTxt.gz | perl tallymer2bed.pl $SEQNAMES | bedops -m  - | gzip > hg38_38mers.unmap.bed.gz
+gzcat hg38.tal_30.gtTxt.gz | perl tallymer2bed.pl $SEQNAMES | bedops -m  - | gzip > hg38_30mers.unmap.bed.gz
 
 wget https://hgdownload.cse.ucsc.edu/goldenpath/hg38/bigZips/hg38.2bit
 
@@ -167,6 +166,6 @@ function makeBigWig {
 }
 
 TWOBIT=hg38.2bit
-BEDPREFIX=hg38_38mers
+BEDPREFIX=hg38_30mers
 makeBigWig
 
