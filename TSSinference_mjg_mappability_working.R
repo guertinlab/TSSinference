@@ -238,6 +238,12 @@ y = Sys.time()
 
 x = potential.tss[potential.tss$chrom == 'chr2' & !is.na(potential.tss$height),]
 
+########################
+########################
+#this is where I stopped. dbscan works reasoanbly well for clustering TSS, 
+#but I believe the current approach reorders the vectors/columns.
+#pick it up here
+
 dbscan(x[4000:4008,], eps = 40, minPts=2)
 
 
