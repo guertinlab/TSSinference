@@ -731,15 +731,19 @@ function toggle_visibility(id1) {
 <li><a href="#th-chunk-seqoutbias"><span class="toc-section-number">2.4.1</span> 3.5th chunk: seqOutBias<br />
 </a></li>
 </ul></li>
+<li><a href="#th-chunk-final-metrics"><span class="toc-section-number">2.5</span> 4th chunk: final metrics</a></li>
+<li><a href="#merge-qc-scripts"><span class="toc-section-number">2.6</span> Merge QC scripts</a></li>
+<li><a href="#last-chunk-cleanup-intermediate-files-and-rezip"><span class="toc-section-number">2.7</span> Last chunk: cleanup intermediate files and rezip</a></li>
 </ul></li>
-<li><a href="#split-bed-files-by-strand"><span class="toc-section-number">3</span> Split BED files by strand</a></li>
-<li><a href="#add-tracklines"><span class="toc-section-number">4</span> Add tracklines</a></li>
-<li><a href="#zip-bedgraphs-for-better-quality-of-life"><span class="toc-section-number">5</span> Zip bedGraphs for better quality of life</a></li>
-<li><a href="#sftp-bedgraphs-to-local-machine-and-check-md5-sums"><span class="toc-section-number">6</span> sftp bedGraphs to local machine and check md5 sums</a></li>
-<li><a href="#troubleshooting"><span class="toc-section-number">7</span> Troubleshooting</a>
+<li><a href="#visualization"><span class="toc-section-number">3</span> Visualization</a>
 <ul>
-<li><a href="#method-1"><span class="toc-section-number">7.1</span> Method 1</a></li>
-<li><a href="#method-2"><span class="toc-section-number">7.2</span> Method 2</a></li>
+<li><a href="#separate-merged-pe2-bed-file-into-plusminus-and-add-tracklines"><span class="toc-section-number">3.1</span> Separate merged PE2 BED file into plus/minus and add tracklines</a></li>
+<li><a href="#genome-browser-session"><span class="toc-section-number">3.2</span> Genome browser session</a></li>
+</ul></li>
+<li><a href="#troubleshooting"><span class="toc-section-number">4</span> Troubleshooting</a>
+<ul>
+<li><a href="#method-1"><span class="toc-section-number">4.1</span> Method 1</a></li>
+<li><a href="#method-2"><span class="toc-section-number">4.2</span> Method 2</a></li>
 </ul></li>
 </ul>
 </div>
@@ -750,15 +754,19 @@ function toggle_visibility(id1) {
 <h2><span class="header-section-number">1.1</span> Download data</h2>
 <p>Originally generated for the PEPPRO paper. Access from Gene Expression Omnibus with<br />
 accession number GSE141843.</p>
-<p>H9 data:
-Controls:
-* H9_DMSO_rep1_pro (SRR10669536)
-* H9_DMSO_rep2_pro (SRR10669537)
-* H9_DMSO_rep3_pro (SRR10669538)</p>
-<p>Treatment (60 min 200nM romidepsin [HDAC inhibitor]):
-* H9_200nM_romidepsin_rep1_pro (SRR10669539)
-* H9_200nM_romidepsin_rep2_pro (SRR10669540)
-* H9_200nM_romidepsin_rep3_pro (SRR10669541)</p>
+<p>H9 data:</p>
+<p>Controls:</p>
+<ul>
+<li>H9_DMSO_rep1_pro (SRR10669536)</li>
+<li>H9_DMSO_rep2_pro (SRR10669537)</li>
+<li>H9_DMSO_rep3_pro (SRR10669538)</li>
+</ul>
+<p>Treatment (60 min 200nM romidepsin [HDAC inhibitor]):</p>
+<ul>
+<li>H9_200nM_romidepsin_rep1_pro (SRR10669539)</li>
+<li>H9_200nM_romidepsin_rep2_pro (SRR10669540)</li>
+<li>H9_200nM_romidepsin_rep3_pro (SRR10669541)</li>
+</ul>
 <p>To download SRA FASTQs as separate paired end files, use <code>fasterq-dump</code>, available<br />
 in newer versions of sratoolkit.</p>
 <pre><code>module load sratoolkit/2.11.3
@@ -785,32 +793,70 @@ mv SRR10669540_1.fastq H9_200nM_romidepsin_rep2_PE1.fastq
 mv SRR10669540_2.fastq H9_200nM_romidepsin_rep2_PE2.fastq
 mv SRR10669541.man_1.fastq H9_200nM_romidepsin_rep3_PE1.fastq
 mv SRR10669541.man_2.fastq H9_200nM_romidepsin_rep3_PE2.fastq</code></pre>
-<p>First errors: samples SRR10669538 and SRR10669541 are returning<br />
-“item not found” when I try to run fastq-dump. I manually downloaded them from<br />
+<p>First errors: samples SRR10669538 and SRR10669541 are returning “item not found”<br />
+when I try to run fastq-dump. I manually downloaded them from<br />
 the SRA website <a href="https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=search_seq_name" class="uri">https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=search_seq_name</a><br />
-based on the experiment accessions:
-* H9_DMSO_rep3_pro (SRR10669538): SRX7348013
-* Eventually got these from Guertin lab directory directly
-* H9_200nM_romidepsin_rep3_pro (SRR10669541): SRX7348016
-* Got link to them on amazon web services directly, then fasterq-dump’ed on that file directly</p>
+based on the experiment accessions:</p>
+<ul>
+<li>H9_DMSO_rep3_pro (SRR10669538): SRX7348013
+<ul>
+<li>Eventually got these from Guertin lab directory directly</li>
+</ul></li>
+<li>H9_200nM_romidepsin_rep3_pro (SRR10669541): SRX7348016
+<ul>
+<li>Got link to them on amazon web services directly, then fasterq-dump’ed on that file directly</li>
+</ul></li>
+</ul>
 </div>
 <div id="software-required" class="section level2" number="1.2">
 <h2><span class="header-section-number">1.2</span> Software required</h2>
-<p>Follows required software and dependencies as listed in <a href>link</a>.</p>
+<p>Follows required software and dependencies as <a href="https://github.com/guertinlab/Nascent_RNA_Methods">listed here</a>.</p>
 </div>
 <div id="reference-genome-annotation" class="section level2" number="1.3">
 <h2><span class="header-section-number">1.3</span> Reference genome annotation</h2>
 <p>Make sure annotated genome files are in working directory.</p>
-<p>You know, I might as well recreate the reference gene annotations anyway, just to be safe.</p>
-<pre><code># Double checking ref genome annotations
-mkdir new_ref
-cd new_ref
-awk &#39;$3==&quot;gene&quot;&#39; Homo_sapiens.GRCh38.106.chr.gtf | sed &#39;s/^/chr/&#39; | awk &#39;{OFS=&quot;\t&quot;;} {print $1,$4,$5,$10,$14,$7}&#39; | sed &#39;s/&quot;;//g&#39; | sed &#39;s/&quot;//g&#39; | sed &#39;s/chrMT/chrM/g&#39; | sort -k5,5 &gt; Homo_sapiens.GR38.106.new.bed
-# This is different from the previous one only in that the chrMT/chrmM exchange worked this time</code></pre>
+<pre><code>#! /usr/bin/bash
+
+# Run this directly in the command line,
+# in directory with Homo_sapiens.GRCh38.${release}.chr.gtf.gz (or unzipped equivalent)
+
+# Variables
+release=106
+
+# Modules
+module load bedtools
+
+# Commands
+#echo &quot;Unzipping main ref genome GTF&quot;
+#gunzip Homo_sapiens.GRCh38.${release}.chr.gtf.gz
+
+echo &quot;extract all exon 1 annotations and reformat to .bed&quot;
+grep &#39;exon_number &quot;1&quot;&#39; Homo_sapiens.GRCh38.${release}.chr.gtf | sed &#39;s/^/chr/&#39; | awk &#39;{OFS=&quot;\t&quot;;} {print $1,$4,$5,$14,$20,$7}&#39; | sed &#39;s/&quot;;//g&#39; | sed &#39;s/&quot;//g&#39; | sed &#39;s/chrMT/chrM/g&#39; | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.tss.bed
+        
+echo &quot;extract all exons&quot;
+grep &#39;exon_number&#39; Homo_sapiens.GRCh38.${release}.chr.gtf | sed &#39;s/^/chr/&#39; | awk &#39;{OFS=&quot;\t&quot;;} {print $1,$4,$5,$14,$20,$7}&#39; | sed &#39;s/&quot;;//g&#39; | sed &#39;s/&quot;//g&#39; | sed &#39;s/chrMT/chrM/g&#39; | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.all.exons.bed
+        
+echo &quot;extract all complete gene annotations&quot;
+awk &#39;$3 == &quot;gene&quot;&#39; Homo_sapiens.GRCh38.${release}.chr.gtf | sed &#39;s/^/chr/&#39; | awk &#39;{OFS=&quot;\t&quot;;} {print $1,$4,$5,$10,$14,$7}&#39; | sed &#39;s/&quot;;//g&#39; | sed &#39;s/&quot;//g&#39; | sed &#39;s/chrMT/chrM/g&#39; | sort -k5,5 &gt; Homo_sapiens.GRCh38.${release}.bed
+        
+echo &quot;merge exon intervals that overlap each other&quot;
+mergeBed -s -c 6 -o distinct -i Homo_sapiens.GRCh38.${release}.all.exons.bed | awk &#39;{OFS=&quot;\t&quot;;} {print $1,$2,$3,$4,$2,$4}&#39; | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.all.exons.merged.bed
+        
+echo &quot;remove all first exons (so pause region is excluded from exon / intron density ratio)&quot;
+subtractBed -s -a Homo_sapiens.GRCh38.${release}.all.exons.merged.bed -b Homo_sapiens.GRCh38.${release}.tss.bed | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.no.first.exons.bed
+
+#extract gene names of exons
+intersectBed -s -wb -a Homo_sapiens.GRCh38.${release}.no.first.exons.bed -b Homo_sapiens.GRCh38.${release}.bed | awk &#39;{OFS=&quot;\t&quot;;} {print $1,$2,$3,$11,$4,$4}&#39; | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.no.first.exons.named.bed
+        
+#extract the pause region from the first exons, position 20 - 120 downstream of the TSS
+awk &#39;{OFS=&quot;\t&quot;;} $6 == &quot;+&quot; {print $1,$2+20,$2 + 120,$4,$5,$6} $6 == &quot;-&quot; {print $1,$3 - 120,$3 - 20,$4,$5,$6}&#39; Homo_sapiens.GRCh38.${release}.tss.bed | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.pause.bed
+        
+#define and name all introns
+subtractBed -s -a Homo_sapiens.GRCh38.${release}.bed -b Homo_sapiens.GRCh38.${release}.all.exons.merged.bed | sort -k1,1 -k2,2n &gt; Homo_sapiens.GRCh38.${release}.introns.bed</code></pre>
 </div>
 <div id="quick-umi-length-check" class="section level2" number="1.4">
 <h2><span class="header-section-number">1.4</span> Quick UMI length check</h2>
-<p>It’s probably 8, but choose any one of the multiple checking methods from previous<br />
+<p>It’s probably 8, but choose any one of the multiple checking methods from <a href="https://github.com/guertinlab/znf143_degron/blob/main/ZNF143_dTAG13_PROseq.Rmd">line 226 here</a><br />
 to confirm.</p>
 </div>
 </div>
@@ -1041,69 +1087,83 @@ echo $fq
 sed -e &quot;s/XXXXXXX/${fq}/g&quot; &quot;${SCRIPTS}/${file}&quot; &gt; ${SCRIPTS}/${nm}_seqOutBias.sh
 sbatch ${SCRIPTS}/${nm}_seqOutBias.sh
 done</code></pre>
-<p>Special for this time: run on all the H9 files together.
-““”
-I think you can use a list of the BAM files, no need to combine.
-x=$(ls <em>bam)
-use <span class="math inline">\(x as the input for seqOutBias &quot;&quot;&quot; ``` x=\)</span>(ls </em>bam)</p>
-<p>seqOutBias $genome <span class="math inline">\(x --no-scale --stranded --bed-stranded-positive \
---bw=\)</span>name.bigWig –bed=<span class="math inline">\(name.bed --out-split-pairends --only-paired \
---tail-edge --read-size=\)</span>read_size</p>
-<pre><code>
-Just submit directly from command line.
+<p>Special for this time: also run on all the H9 files together.</p>
+<pre><code>x=$(ls *bam)
 
-## 4th chunk: final metrics</code></pre>
-<p>echo “Counting reads in pause region”
-coverageBed -counts -s -a $annotation_prefix.pause.bed -b ${name}_not_scaled_PE1.bed |<br />
-awk ‘$7&gt;0’ | sort -k5,5 -k7,7nr | sort -k5,5 -u &gt; ${name}_pause.bed</p>
-<p>echo “Discarding anything with chr and strand inconsistencies”
-join -1 5 -2 5 ${name}_pause.bed $annotation_prefix.bed |<br />
-awk ‘{OFS=“;} $2==$8 &amp;&amp; $6==$12 {print $2, $3, $4, $1, $6, $7, $9, $10}’ |<br />
-awk ‘{OFS=“;} $5 ==”+” {print $1,$2+480,$8,$4,$6,$5} $5 == “-” {print $1,$7,$2 - 380,$4,$6,$5}’ |<br />
-awk ‘{OFS=“;} $3&gt;$2 {print $1,$2,$3,$4,$5,$6}’ &gt; ${name}_pause_counts_body_coordinates.bed</p>
-<p>echo “Getting coverage from pause count coordinates”
-coverageBed -counts -s -a ${name}_pause_counts_body_coordinates.bed<br />
--b ${name}_not_scaled_PE1.bed | awk ‘$7&gt;0’ |<br />
-awk ‘{OFS=“;} {print $1,$2,$3,$4,$5,$6,$7,$5/100,$7/($3 - $2)}’ |<br />
-awk ‘{OFS=“;} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$8/$9}’ &gt; ${name}_pause_body.bed</p>
-<p>echo “Calculating pause indices and plotting as PDF”
-pause_index.R ${name}_pause_body.bed</p>
-<p>echo “Counting introns”
-coverageBed -counts -s -a $annotation_prefix.introns.bed<br />
--b ${name}_not_scaled_PE1.bed | awk ‘$7&gt;0’ |<br />
-awk ‘{OFS=“;} {print $1,$2,$3,$5,$5,$6,$7,($3 - $2)}’ &gt; ${name}_intron_counts.bed</p>
-<p>echo “Counting exons”
-coverageBed -counts -s -a $annotation_prefix.no.first.exons.named.bed<br />
--b ${name}_not_scaled_PE1.bed | awk ‘$7&gt;0’ |<br />
-awk ‘{OFS=“;} {print $1,$2,$3,$4,$4,$6,$7,($3 - $2)}’ &gt; ${name}_exon_counts.bed</p>
-<p>echo “***** Estimating nascent RNA purity with exon/intron density ratio *****”
-exon_intron_ratio.R ${name}_exon_counts.bed ${name}_intron_counts.bed</p>
-<p>echo “***** Script complete *****”</p>
-<pre><code>Interactive:</code></pre>
-<p>file=PROseq_final-metrics_template.sh
-SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts</p>
-<p>for i in *PE1.fastq
+seqOutBias $genome $x --no-scale --stranded --bed-stranded-positive \
+    --bw=$name.bigWig --bed=$name.bed --out-split-pairends --only-paired \
+    --tail-edge --read-size=$read_size</code></pre>
+<p>Just submit directly from command line.</p>
+</div>
+</div>
+<div id="th-chunk-final-metrics" class="section level2" number="2.5">
+<h2><span class="header-section-number">2.5</span> 4th chunk: final metrics</h2>
+<pre><code>echo &quot;Counting reads in pause region&quot;
+coverageBed -counts -s -a $annotation_prefix.pause.bed -b ${name}_not_scaled_PE1.bed | \
+    awk &#39;$7&gt;0&#39; | sort -k5,5 -k7,7nr | sort -k5,5 -u &gt; ${name}_pause.bed
+
+echo &quot;Discarding anything with chr and strand inconsistencies&quot;
+join -1 5 -2 5 ${name}_pause.bed $annotation_prefix.bed | \
+    awk &#39;{OFS=&quot;\t&quot;;} $2==$8 &amp;&amp; $6==$12 {print $2, $3, $4, $1, $6, $7, $9, $10}&#39; | \
+    awk &#39;{OFS=&quot;\t&quot;;} $5 == &quot;+&quot; {print $1,$2+480,$8,$4,$6,$5} $5 == &quot;-&quot; {print $1,$7,$2 - 380,$4,$6,$5}&#39; | \
+    awk &#39;{OFS=&quot;\t&quot;;} $3&gt;$2 {print $1,$2,$3,$4,$5,$6}&#39; &gt; ${name}_pause_counts_body_coordinates.bed
+
+echo &quot;Getting coverage from pause count coordinates&quot;
+coverageBed -counts -s -a ${name}_pause_counts_body_coordinates.bed \
+    -b ${name}_not_scaled_PE1.bed | awk &#39;$7&gt;0&#39; | \
+    awk &#39;{OFS=&quot;\t&quot;;} {print $1,$2,$3,$4,$5,$6,$7,$5/100,$7/($3 - $2)}&#39; | \
+    awk &#39;{OFS=&quot;\t&quot;;} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$8/$9}&#39; &gt; ${name}_pause_body.bed
+
+echo &quot;Calculating pause indices and plotting as PDF&quot;
+pause_index.R ${name}_pause_body.bed
+
+echo &quot;Counting introns&quot;
+coverageBed -counts -s -a $annotation_prefix.introns.bed \
+    -b ${name}_not_scaled_PE1.bed | awk &#39;$7&gt;0&#39; | \
+    awk &#39;{OFS=&quot;\t&quot;;} {print $1,$2,$3,$5,$5,$6,$7,($3 - $2)}&#39; &gt; ${name}_intron_counts.bed
+
+echo &quot;Counting exons&quot;
+coverageBed -counts -s -a $annotation_prefix.no.first.exons.named.bed \
+    -b ${name}_not_scaled_PE1.bed | awk &#39;$7&gt;0&#39; | \
+    awk &#39;{OFS=&quot;\t&quot;;} {print $1,$2,$3,$4,$4,$6,$7,($3 - $2)}&#39; &gt; ${name}_exon_counts.bed
+
+echo &quot;***** Estimating nascent RNA purity with exon/intron density ratio *****&quot;
+exon_intron_ratio.R ${name}_exon_counts.bed ${name}_intron_counts.bed
+
+echo &quot;***** Script complete *****&quot;</code></pre>
+<p>Interactive:</p>
+<pre><code>file=PROseq_final-metrics_template.sh
+SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts
+
+for i in *PE1.fastq
 do
-nm=$(echo <span class="math inline">\(i | rev | cut -f 1 -d &#39;/&#39; | rev | cut -f 1 -d &#39;.&#39;) fq=\)</span>(echo $i | rev | cut -f 1 -d ‘/’ | rev)
+nm=$(echo $i | rev | cut -f 1 -d &#39;/&#39; | rev | cut -f 1 -d &#39;.&#39;)
+fq=$(echo $i | rev | cut -f 1 -d &#39;/&#39; | rev)
 echo $nm
-echo <span class="math inline">\(fq sed -e &quot;s/XXXXXXX/\)</span>{fq}/g” “<span class="math inline">\({SCRIPTS}/\)</span>{file}” &gt; <span class="math inline">\({SCRIPTS}/\)</span>{nm}_finals.sh
-sbatch <span class="math inline">\({SCRIPTS}/\)</span>{nm}_finals.sh
-done</p>
-<pre><code>
-## Merge QC scripts</code></pre>
-<p>cat *_QC_metrics.txt | awk ‘!x[$0]++’ &gt; H9_HDACi_QC_metrics.txt
-plot_all_metrics.R H9_HDACi_QC_metrics.txt H9_HDACi_PRO-seq_final</p>
-<pre><code>
-## Last chunk: cleanup intermediate files and rezip</code></pre>
-<p>#! /usr/bin/bash</p>
-<p>directory=/home/FCAM/jdong/H9_HDACi_PROseq/data</p>
-<p>cd $directory</p>
-<p>for i in *_PE1.fastq
+echo $fq
+sed -e &quot;s/XXXXXXX/${fq}/g&quot; &quot;${SCRIPTS}/${file}&quot; &gt; ${SCRIPTS}/${nm}_finals.sh
+sbatch ${SCRIPTS}/${nm}_finals.sh
+done</code></pre>
+</div>
+<div id="merge-qc-scripts" class="section level2" number="2.6">
+<h2><span class="header-section-number">2.6</span> Merge QC scripts</h2>
+<pre><code>cat *_QC_metrics.txt | awk &#39;!x[$0]++&#39; &gt; H9_HDACi_QC_metrics.txt
+plot_all_metrics.R H9_HDACi_QC_metrics.txt H9_HDACi_PRO-seq_final</code></pre>
+</div>
+<div id="last-chunk-cleanup-intermediate-files-and-rezip" class="section level2" number="2.7">
+<h2><span class="header-section-number">2.7</span> Last chunk: cleanup intermediate files and rezip</h2>
+<pre><code>#! /usr/bin/bash
+
+directory=/home/FCAM/jdong/H9_HDACi_PROseq/data
+
+cd $directory
+
+for i in *_PE1.fastq
 do
 # name stuff
-name=$(echo $i | awk -F “_PE1.fastq” ‘{print $1}’)
-echo “Cleaning up ${name}”
-echo “Removing unneccesary intermediate files”
+name=$(echo $i | awk -F &quot;_PE1.fastq&quot; &#39;{print $1}&#39;)
+echo &quot;Cleaning up ${name}&quot;
+echo &quot;Removing unneccesary intermediate files&quot;
 rm ${name}_PE1_short.fastq
 rm ${name}_PE2_short.fastq
 rm ${name}_PE1_noadap.fastq
@@ -1122,118 +1182,111 @@ rm ${name}_PE2_processed.fastq.paired.fq
 rm ${name}_PE2_processed.fastq.single.fq
 rm ${name}.extendedFrags.fastq.gz
 rm ${name}.notCombined_1.fastq.gz
-rm ${name}.notCombined_2.fastq.gz</p>
-<p>echo “Re-zipping original FASTQ files”
+rm ${name}.notCombined_2.fastq.gz
+
+echo &quot;Re-zipping original FASTQ files&quot;
 gzip ${name}_PE1.fastq
 gzip ${name}_PE2.fastq
-done</p>
-<pre><code>
-# Visualization
-
-## Separate merged PE2 BED file into plus/minus and add tracklines</code></pre>
+done</code></pre>
 </div>
 </div>
+<div id="visualization" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Visualization</h1>
+<div id="separate-merged-pe2-bed-file-into-plusminus-and-add-tracklines" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Separate merged PE2 BED file into plus/minus and add tracklines</h2>
+<pre><code># Split BED files by strand
+awk &#39;{OFS=&quot;\t&quot;;} $6==&quot;+&quot; {print $1,$2,$3,$5}&#39; H9_HDACi_merged_not_scaled_PE2.bed &gt; H9_HDACi_merged_not_scaled_PE2_minus_no-header.bedgraph
+awk &#39;{OFS=&quot;\t&quot;;} $6==&quot;-&quot; {print $1,$2,$3,$5}&#39; H9_HDACi_merged_not_scaled_PE2.bed &gt; H9_HDACi_merged_not_scaled_PE2_plus_no-header.bedgraph
+
+# Add tracklines
+awk &#39;BEGIN {print &quot;track type=bedGraph name=H9_HDACi_plus description=\&quot;H9_HDACi_plus\&quot; visibility=full autoScale=on alwaysZero=on color=0,0,255 windowingFunction=maximum&quot; } \
+    {print $0}&#39; H9_HDACi_merged_not_scaled_PE2_plus_no-header.bedgraph &gt; H9_HDACi_merged_PE2_plus.bedgraph
+
+awk &#39;BEGIN {print &quot;track type=bedGraph name=H9_HDACi_minus description=\&quot;H9_HDACi_minus\&quot; visibility=full autoScale=on alwaysZero=on color=255,0,0 windowingFunction=maximum&quot; } \
+    {print $0}&#39; H9_HDACi_merged_not_scaled_PE2_minus_no-header.bedgraph &gt; H9_HDACi_merged_PE2_minus.bedgraph  
+
+# Zip bedGraphs for better quality of life 
+gzip H9_HDACi_merged_PE2*.bedgraph
+
+# sftp bedGraphs to local machine and check md5 sums</code></pre>
 </div>
-<div id="split-bed-files-by-strand" class="section level1" number="3">
-<h1><span class="header-section-number">3</span> Split BED files by strand</h1>
-<p>awk ‘{OFS=“;} $6==”+” {print $1,$2,$3,$5}’ H9_HDACi_merged_not_scaled_PE2.bed &gt; H9_HDACi_merged_not_scaled_PE2_minus_no-header.bedgraph
-awk ‘{OFS=“;} $6==”-” {print $1,$2,$3,$5}’ H9_HDACi_merged_not_scaled_PE2.bed &gt; H9_HDACi_merged_not_scaled_PE2_plus_no-header.bedgraph</p>
-</div>
-<div id="add-tracklines" class="section level1" number="4">
-<h1><span class="header-section-number">4</span> Add tracklines</h1>
-<p>awk ‘BEGIN {print “track type=bedGraph name=H9_HDACi_plus description=&quot;H9_HDACi_plus&quot; visibility=full autoScale=on alwaysZero=on color=0,0,255 windowingFunction=maximum” }<br />
-{print $0}’ H9_HDACi_merged_not_scaled_PE2_plus_no-header.bedgraph &gt; H9_HDACi_merged_PE2_plus.bedgraph</p>
-<p>awk ‘BEGIN {print “track type=bedGraph name=H9_HDACi_minus description=&quot;H9_HDACi_minus&quot; visibility=full autoScale=on alwaysZero=on color=255,0,0 windowingFunction=maximum” }<br />
-{print $0}’ H9_HDACi_merged_not_scaled_PE2_minus_no-header.bedgraph &gt; H9_HDACi_merged_PE2_minus.bedgraph</p>
-</div>
-<div id="zip-bedgraphs-for-better-quality-of-life" class="section level1" number="5">
-<h1><span class="header-section-number">5</span> Zip bedGraphs for better quality of life</h1>
-<p>gzip H9_HDACi_merged_PE2*.bedgraph</p>
-</div>
-<div id="sftp-bedgraphs-to-local-machine-and-check-md5-sums" class="section level1" number="6">
-<h1><span class="header-section-number">6</span> sftp bedGraphs to local machine and check md5 sums</h1>
-<pre><code>
-## Genome browser session
-
-Link:
-[https://genome.ucsc.edu/s/jhdong/H9_HDACi_merged](https://genome.ucsc.edu/s/jhdong/H9_HDACi_merged)
-
-Positions for various highly expressed genes:
-
-ACTN1 [-]: chr14:68,979,279-68,979,318
-HSP90 [-]: chr14:102,087,015-102,087,053
-
-GAPDH [+]: chr12:6,534,514-6,534,543 
-ATF1 [+]: chr12:50,764,093-50,764,136
-
-Minus-oriented genes have pileup starting on the 1st base of the gene, but\
-plus-oriented genes seem to have pileup starting about 9-10 bases into the gene,\
-is this typical? No.
-
-
-Look for reads that align to ATF1.
-region: &quot;chr12:50,764,101-50,764,451&quot;</code></pre>
-<p>samtools index H9_DMSO_rep1.bam
-samtools view -b -o H9_DMSO_rep1_ATF1.bam H9_DMSO_rep1.bam “chr12:50,764,101-50,764,451”
+<div id="genome-browser-session" class="section level2" number="3.2">
+<h2><span class="header-section-number">3.2</span> Genome browser session</h2>
+<p>Link:
+<a href="https://genome.ucsc.edu/s/jhdong/H9_HDACi_merged">https://genome.ucsc.edu/s/jhdong/H9_HDACi_merged</a></p>
+<p>Positions for various highly expressed genes:</p>
+<p>ACTN1 [-]: chr14:68,979,279-68,979,318
+HSP90 [-]: chr14:102,087,015-102,087,053</p>
+<p>GAPDH [+]: chr12:6,534,514-6,534,543
+ATF1 [+]: chr12:50,764,093-50,764,136</p>
+<p>Minus-oriented genes have pileup starting on the 1st base of the gene, but<br />
+plus-oriented genes seem to have pileup starting about 9-10 bases into the gene,<br />
+is this typical? No.</p>
+<p>Look for reads that align to ATF1.
+region: “chr12:50,764,101-50,764,451”</p>
+<pre><code>samtools index H9_DMSO_rep1.bam
+samtools view -b -o H9_DMSO_rep1_ATF1.bam H9_DMSO_rep1.bam &quot;chr12:50,764,101-50,764,451&quot;
 samtools view H9_DMSO_rep1_ATF1.bam | grep -w 50764101
-# Just looking at the output from this, there are at least 19 reads that map to the beginning of
-# the ATF1 gene at the TSS, but there are only 4 hits in the merged bedgraph. Hmm…
-```</p>
-<p>Reads that align to positive strand:
-SRR10669536.2003896
-sequence? AGTAGCGGCCCTGACTGCCGAGGAAACGG</p>
-<p>From raw FASTQ:
-$ grep -A 1 -w SRR10669536.2003896 H9_DMSO_rep1_PE2.fastq
-<span class="citation">@SRR10669536.2003896</span> 2003896 length=38
+# Just looking at the output from this, there are at least 19 reads that map to the beginning of 
+# the ATF1 gene at the TSS, but there are only 4 hits in the merged bedgraph. Hmm...</code></pre>
+<p>Reads that align to positive strand:</p>
+<p>SRR10669536.2003896<br />
+sequence? AGTAGCGGCCCTGACTGCCGAGGAAACGG<br />
+</p>
+<pre><code># From raw FASTQ:
+grep -A 1 -w SRR10669536.2003896 H9_DMSO_rep1_PE2.fastq
+@SRR10669536.2003896 2003896 length=38
 AGTAGCGGCCCTGACTGCCGAGGAAACGGTAGCTTAGG
 +SRR10669536.2003896 2003896 length=38
-AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE</p>
-<p>$ grep -A 1 -w SRR10669536.2003896 H9_DMSO_rep1_PE1.fastq
-<span class="citation">@SRR10669536.2003896</span> 2003896 length=45
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE
+
+grep -A 1 -w SRR10669536.2003896 H9_DMSO_rep1_PE1.fastq
+@SRR10669536.2003896 2003896 length=45
 GTAGCGATGTCCTAAGCTACCGTTTCCTCGGCAGTCAGGGCCGCT
 +SRR10669536.2003896 2003896 length=45
-AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE</p>
-<p>If I just made my own PE1 read (reverse complemented from reading off genome browser):
-5’ TO 3’:
-TTAGGACAGTTGGCTGTTAAGTGACACTGATTCTCCCC</p>
-<p><span class="citation">@SRR10669536.2003896</span> 2003896 length=38
-GGGGAGAATCAGTGTCACTTAACAGCCAACTGTCCTAA
-+<span class="citation">@SRR10669536.2003896</span> 2003896 length=38
-AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE</p>
-<p>Oh that one’s downstream. If I need an upstream one:
-5’ TO 3’:
-CCTACCCCAAACGCACACTAGTGCTCAGTTTTGCCCCC</p>
-<p>Reverse comp?
-<span class="citation">@SRR10669536.2003896</span> 2003896 length=38
-GGGGGCAAAACTGAGCACTAGTGTGCGTTTGGGGTAGG
-+SRR10669536.2003896 2003896 length=38
-AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE</p>
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE</code></pre>
+<p>Isolate these ATF1-aligning reads from original PE1 and PE2 FASTQ files and run them through:</p>
+<ul>
+<li>original pipeline (above)</li>
+<li>the two methods below</li>
+</ul>
 </div>
-<div id="troubleshooting" class="section level1" number="7">
-<h1><span class="header-section-number">7</span> Troubleshooting</h1>
+</div>
+<div id="troubleshooting" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Troubleshooting</h1>
 <p>Trying two methods to get accurate pileups:</p>
-<div id="method-1" class="section level2" number="7.1">
-<h2><span class="header-section-number">7.1</span> Method 1</h2>
-<p>From <a href="https://github.com/guertinlab/TSSinference/blob/master/old/process_raw_PRO.sh">TSSInference/old</a> on Github:
-* Start with BAMs from existing pipeline
-* Actually: check if the bams I have are similar or different to the first set of bams produced in this older pipeline. Especially be careful of if strands are reverse complemented
-* Run line 67: separate bam into a PE2-only BAM
-* Run lines 70-77:
-* Filter by flags: exclude reads unmapped to reverse strand (-F 20) and label these “plus strand”
-* Filter by flags: (-f 0x10) read reverse strands label as “minus”
-* Re-align to hg38 but with plus and minus separately
-* Run lines 79, 81: run seqOutBias on plus and minus PE2 BAMs
-* Visualize on genome browser</p>
+<div id="method-1" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Method 1</h2>
+<p>From <a href="https://github.com/guertinlab/TSSinference/blob/master/old/process_raw_PRO.sh">TSSInference/old</a> on Github:</p>
+<ul>
+<li>Start with BAMs from existing pipeline
+<ul>
+<li>Actually: check if the bams I have are similar or different to the first set of bams produced in this older pipeline. Especially be careful of if strands are reverse complemented</li>
+</ul></li>
+<li>Run line 67: separate bam into a PE2-only BAM</li>
+<li>Run lines 70-77:
+<ul>
+<li>Filter by flags: exclude reads unmapped to reverse strand (-F 20) and label these “plus strand”</li>
+<li>Filter by flags: (-f 0x10) read reverse strands label as “minus”</li>
+<li>Re-align to hg38 but with plus and minus separately</li>
+</ul></li>
+<li>Run lines 79, 81: run seqOutBias on plus and minus PE2 BAMs</li>
+<li>Visualize on genome browser</li>
+</ul>
 </div>
-<div id="method-2" class="section level2" number="7.2">
-<h2><span class="header-section-number">7.2</span> Method 2</h2>
-<pre><code>* In 4.5: still trim UMI_length from end (-e) of PE2 reads, but DO NOT REVERSE COMPLEMENT
-* Filter out rDNA
-* Align PE2-only reads (-U for unaligned) to hg38
-* Run PE2-only bams through seqOutBias with only these options:
-    * --stranded
-    * --bed-stranded-positive
-    * --read-size=30</code></pre>
+<div id="method-2" class="section level2" number="4.2">
+<h2><span class="header-section-number">4.2</span> Method 2</h2>
+<ul>
+<li>In 4.5: still trim UMI_length from end (-e) of PE2 reads, but DO NOT REVERSE COMPLEMENT</li>
+<li>Filter out rDNA</li>
+<li>Align PE2-only reads (-U for unaligned) to hg38</li>
+<li>Run PE2-only bams through seqOutBias with only these options:
+<ul>
+<li>–stranded</li>
+<li>–bed-stranded-positive</li>
+<li>–read-size=30</li>
+</ul></li>
+</ul>
 </div>
 </div>
 
