@@ -1,0 +1,569 @@
+---
+title: \sf HDAC inhibition in H9 cells PRO-seq analysis
+header-includes:
+- \usepackage{color}
+- \usepackage{float}
+- \DeclareUnicodeCharacter{2212}{-}
+author: Jinhong Dong
+date: "June 24, 2022"
+output:
+  bookdown::html_document2:
+    toc: true
+fontsize: 14pt
+geometry: margin=1in
+---
+
+# Setting up
+
+## Download data
+
+Originally generated for the PEPPRO paper. Access from Gene Expression Omnibus with\
+accession number GSE141843.
+
+H9 data:
+Controls:
+* H9_DMSO_rep1_pro (SRR10669536)
+* H9_DMSO_rep2_pro (SRR10669537)
+* H9_DMSO_rep3_pro (SRR10669538)
+
+Treatment (60 min 200nM romidepsin [HDAC inhibitor]):
+* H9_200nM_romidepsin_rep1_pro (SRR10669539)
+* H9_200nM_romidepsin_rep2_pro (SRR10669540)
+* H9_200nM_romidepsin_rep3_pro (SRR10669541)
+
+To download SRA FASTQs as separate paired end files, use `fasterq-dump`, available\
+in newer versions of sratoolkit.
+
+```
+module load sratoolkit/2.11.3
+
+# download controls
+fasterq-dump SRR10669536
+fasterq-dump SRR10669537
+# fastq-dump -I --split-files SRR10669538 # this failed
+
+# download treatments
+fasterq-dump SRR10669539
+fasterq-dump SRR10669540
+# fastq-dump -I --split-files SRR10669541 # this also failed
+
+# rename files to match their experimental conditions
+mv SRR10669536_1.fastq H9_DMSO_rep1_PE1.fastq
+mv SRR10669536_2.fastq H9_DMSO_rep1_PE2.fastq
+mv SRR10669537_1.fastq H9_DMSO_rep2_PE1.fastq
+mv SRR10669537_2.fastq H9_DMSO_rep2_PE2.fastq
+
+mv SRR10669539_1.fastq H9_200nM_romidepsin_rep1_PE1.fastq
+mv SRR10669539_2.fastq H9_200nM_romidepsin_rep1_PE2.fastq
+mv SRR10669540_1.fastq H9_200nM_romidepsin_rep2_PE1.fastq
+mv SRR10669540_2.fastq H9_200nM_romidepsin_rep2_PE2.fastq
+mv SRR10669541.man_1.fastq H9_200nM_romidepsin_rep3_PE1.fastq
+mv SRR10669541.man_2.fastq H9_200nM_romidepsin_rep3_PE2.fastq
+```
+First errors: samples SRR10669538 and SRR10669541 are returning \
+"item not found" when I try to run fastq-dump. I manually downloaded them from \
+the SRA website https://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=search_seq_name \
+based on the experiment accessions:
+* H9_DMSO_rep3_pro (SRR10669538): SRX7348013
+	* Eventually got these from Guertin lab directory directly
+* H9_200nM_romidepsin_rep3_pro (SRR10669541): SRX7348016
+	* Got link to them on amazon web services directly, then fasterq-dump'ed on that file directly
+
+## Software required
+
+Follows required software and dependencies as listed in [link]().
+
+
+## Reference genome annotation
+
+Make sure annotated genome files are in working directory.
+
+You know, I might as well recreate the reference gene annotations anyway, just to be safe. 
+
+```
+# Double checking ref genome annotations
+mkdir new_ref
+cd new_ref
+awk '$3=="gene"' Homo_sapiens.GRCh38.106.chr.gtf | sed 's/^/chr/' | awk '{OFS="\t";} {print $1,$4,$5,$10,$14,$7}' | sed 's/";//g' | sed 's/"//g' | sed 's/chrMT/chrM/g' | sort -k5,5 > Homo_sapiens.GR38.106.new.bed
+# This is different from the previous one only in that the chrMT/chrmM exchange worked this time
+
+
+## Quick UMI length check
+It's probably 8, but choose any one of the multiple checking methods from previous\
+to confirm. 
+
+# PRO-seq processing and alignment
+
+Le script gigantic: (echo something for every line so you know where problems \
+occur for troubleshooting)
+
+For consistency, use the same header and variables/modules for every chunk.\
+Change job titles/cores/memory requests as needed. Replace "XXXXXXX" (7 X's)\
+manually or by running an interactive loop to swarm scripts.
+```
+#! /usr/bin/bash
+
+#SBATCH --job-name=H9_HDACi_CHUNK-NAME-HERE_XXXXXXX
+#SBATCH -N 1                    
+#SBATCH -n 1                  
+#SBATCH -c 16                          
+#SBATCH -p general
+#SBATCH --qos=general       
+#SBATCH --mem=16G                    
+#SBATCH --mail-type=ALL 
+#SBATCH --mail-user=jdong@uchc.edu
+#SBATCH -o /home/FCAM/jdong/slurm_out/%x_%j.all_out
+#SBATCH -e /home/FCAM/jdong/slurm_out/%x_%j.all_out
+
+# MODULES
+module load genometools/1.5.10
+module load bedtools bowtie2 cutadapt samtools seqtk
+
+# VARIABLES
+directory=/home/FCAM/jdong/H9_HDACi_PROseq/data
+filename=XXXXXXX
+name=$(echo $filename | awk -F "_PE1.fastq" '{print $1}')
+annotation_prefix=Homo_sapiens.GRCh38.106
+UMI_length=8
+read_size=38
+cores=16
+genome=/home/FCAM/jdong/human38/hg38.fa
+genome_index=/home/FCAM/jdong/human38/hg38
+prealign_rdna_index=/home/FCAM/jdong/hum_rDNA/human_rDNA
+
+cd $directory
+echo "Current directory: " $(pwd)
+echo "Current node: " $(hostname)
+echo "Now running this file: " ${name}
+```
+## Step 0: unzip FASTQs, if they are already zipped.
+
+## 1st chunk: pre-processing
+```
+# [4.3] Processing reads
+echo "Removing adapters from ${name}_PE1 reads"
+cutadapt --cores=$cores \
+	-m $((UMI_length+2)) \
+	-O 1 \
+	-a TGGAATTCTCGGGTGCCAAGG ${name}_PE1.fastq \
+	-o ${name}_PE1_noadap.fastq \
+	--too-short-output ${name}_PE1_short.fastq > ${name}_PE1_cutadapt.txt
+
+echo "Removing adapters from ${name}_PE2 reads"
+cutadapt --cores=$cores \
+	-m $((UMI_length+10)) \
+	-O 1 \
+	-a GATCGTCGGACTGTAGAACTCTGAAC ${name}_PE2.fastq \
+	-o ${name}_PE2_noadap.fastq \
+	--too-short-output ${name}_PE2_short.fastq > ${name}_PE2_cutadapt.txt
+
+echo "Calculating adapter/adapter ratio for ${name}"
+PE1_total=$(wc -l ${name}_PE1.fastq | awk '{print $1/4}')
+PE1_w_Adapter=$(wc -l ${name}_PE1_short.fastq | awk '{print $1/4}')
+AAligation=$(echo "scale=2 ; $PE1_w_Adapter / $PE1_total" | bc)
+
+echo -e "value\texperiment\tthreshold\tmetric" > ${name}_QC_metrics.txt
+echo -e "$AAligation\t$name\t0.80\tAdapter/Adapter" >> ${name}_QC_metrics.txt
+
+# Reverse complement and remove reads shorter than 10 bases
+echo "Reverse complementing ${name}_PE1 reads"
+seqtk seq -L $((UMI_length+10)) -r ${name}_PE1_noadap.fastq > ${name}_PE1_noadap_trimmed.fastq
+
+#remove PCR duplicates
+echo "Removing PCR duplicates for ${name}"
+fqdedup -i ${name}_PE1_noadap_trimmed.fastq -o ${name}_PE1_dedup.fastq
+
+#this variable is a near-optimal table size value for fastq_pair:
+PE1_noAdapter=$(wc -l ${name}_PE1_noadap.fastq | awk '{print $1/4}')
+
+#pair FASTQ files
+echo "Pairing FASTQ files for ${name}"
+fastq_pair -t $PE1_noAdapter ${name}_PE1_noadap.fastq ${name}_PE2_noadap.fastq
+
+# [4.4 RNA degradation ratio score]
+echo "Measuring RNA degradation for ${name}"
+flash -q --compress-prog=gzip --suffix=gz ${name}_PE1_noadap.fastq.paired.fq \
+	${name}_PE2_noadap.fastq.paired.fq -o ${name}
+insert_size.R ${name}.hist ${UMI_length}
+
+# [4.5 Processing for alignment]
+echo "Removing UMI sequences and reverse complementing ${name}_PE2"
+seqtk trimfq -e ${UMI_length} ${name}_PE1_dedup.fastq > ${name}_PE1_processed.fastq
+seqtk trimfq -e ${UMI_length} ${name}_PE2_noadap.fastq | seqtk seq -r - > ${name}_PE2_processed.fastq
+```
+
+Interactive portion:
+```
+file=PROseq_pre-process_template.sh
+SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts
+
+for i in *PE1.fastq
+do
+nm=$(echo $i | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.')
+fq=$(echo $i | rev | cut -f 1 -d '/' | rev)
+echo $nm
+echo $fq
+sed -e "s/XXXXXXX/${fq}/g" "${SCRIPTS}/${file}" > ${SCRIPTS}/${nm}_pre-process.sh
+sbatch ${SCRIPTS}/${nm}_pre-process.sh
+done
+```
+
+## 2nd chunk: alignment
+```
+# Align to rDNA and extract reads that align
+echo "Aligning ${name}_PE1 to rDNA"
+bowtie2 -p $cores -x $prealign_rdna_index -U ${name}_PE1_processed.fastq 2>${name}_bowtie2_rDNA.log | \
+	samtools sort -n - | samtools fastq -f 0x4 - > ${name}_PE1.rDNA.fastq
+	
+# Remove PE2-aligned reads with a rDNA-aligned mate
+echo "Removing PE2 reads with rDNA-aligned mate for ${name}"
+reads=$(wc -l ${name}_PE1.rDNA.fastq | awk '{print $1/4}')
+fastq_pair -t $reads ${name}_PE1.rDNA.fastq ${name}_PE2_processed.fastq
+
+# Align to genome!
+echo "Aligning ${name} to human genome"
+bowtie2 -p $cores --maxins 1000 -x $genome_index --rf -1 ${name}_PE1.rDNA.fastq.paired.fq \
+	-2 ${name}_PE2_processed.fastq.paired.fq 2>${name}_bowtie2.log | samtools view -b - | \
+	samtools sort - -o ${name}.bam
+```
+
+Interactive swarm command:
+```
+file=PROseq_alignments_template.sh
+SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts
+
+for i in *PE1.fastq
+do
+nm=$(echo $i | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.')
+fq=$(echo $i | rev | cut -f 1 -d '/' | rev)
+echo $nm
+echo $fq
+sed -e "s/XXXXXXX/${fq}/g" "${SCRIPTS}/${file}" > ${SCRIPTS}/${nm}_alignment.sh
+sbatch ${SCRIPTS}/${nm}_alignment.sh
+done
+```
+
+## 3rd chunk: pre-seqOutBias calculations
+```
+echo "Calculating the total number of rDNA-aligned reads"
+PE1_prior_rDNA=$(wc -l ${name}_PE1_processed.fastq | awk '{print $1/4}')
+PE1_post_rDNA=$(wc -l ${name}_PE1.rDNA.fastq | awk '{print $1/4}')
+total_rDNA=$(echo "$(($PE1_prior_rDNA-$PE1_post_rDNA))")
+
+echo "Calculating the total reads that concordantly align to hg38 and/or rDNA"
+concordant_pe1=$(samtools view -c -f 0x42 ${name}.bam)
+total=$(echo "$(($concordant_pe1+$total_rDNA))")
+
+echo "Calculating rDNA alignment rate"
+rDNA_alignment=$(echo "scale=2 ; $total_rDNA / $total" | bc)
+
+echo "***** Reporting rDNA alignment rate *****"
+echo -e "$rDNA_alignment\t$name\t0.10\trDNA Alignment Rate" >> ${name}_QC_metrics.txt
+
+# Mappability rate
+map_pe1=$(samtools view -c -f 0x42 ${name}.bam)
+pre_alignment=$(wc -l ${name}_PE1.rDNA.fastq.paired.fq | awk '{print $1/4}')
+alignment_rate=$(echo "scale=2 ; $map_pe1 / $pre_alignment" | bc)
+
+echo "***** Reporting alignment rate *****"
+echo -e "$alignment_rate\t$name\t0.80\tAlignment Rate" >> ${name}_QC_metrics.txt
+
+# Complexity
+echo "***** Calculating complexity and theoretical read depth *****"
+
+echo "Run with no factors (requires seqtk)"
+fqComplexity -i ${name}_PE1_noadap_trimmed.fastq
+
+# calculate factors X and Y
+PE1_total=$(wc -l ${name}_PE1.fastq | awk '{print $1/4}')
+PE1_noadap_trimmed=$(wc -l ${name}_PE1_noadap_trimmed.fastq | awk '{print $1/4}')
+
+factorX=$(echo "scale=2 ; $PE1_noadap_trimmed / $PE1_total" | bc)
+
+echo "Fraction of reads that are not adapter/adapter ligation products or below 10 base inserts:"
+echo $factorX
+
+# calculate PE1 deduplicated reads
+PE1_dedup=$(wc -l ${name}_PE1_dedup.fastq | awk '{print $1/4}')
+
+# divide
+factorY=$(echo "scale=2 ; $concordant_pe1 / $PE1_dedup" | bc)
+
+echo "Re-running with factors"
+fqComplexity -i ${name}_PE1_noadap_trimmed.fastq -x $factorX -y $factorY
+
+echo "Script Complete"
+```
+
+Interactive swarm commands:
+```
+file=PROseq_pre-sob_template.sh
+SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts
+
+for i in *PE1.fastq
+do
+nm=$(echo $i | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.')
+fq=$(echo $i | rev | cut -f 1 -d '/' | rev)
+echo $nm
+echo $fq
+sed -e "s/XXXXXXX/${fq}/g" "${SCRIPTS}/${file}" > ${SCRIPTS}/${nm}_pre-sob.sh
+sbatch ${SCRIPTS}/${nm}_pre-sob.sh
+done
+
+```
+
+### 3.5th chunk: seqOutBias \
+Make sure the intermediate files are in the $directory, then swarm as usual.
+```
+seqOutBias $genome ${name}.bam --no-scale --stranded --bed-stranded-positive \
+    --bw=$name.bigWig --bed=$name.bed --out-split-pairends --only-paired \
+    --tail-edge --read-size=$read_size
+```
+remove --tail-edge, --stranded
+or reconfirm readsize?
+
+Interactive steps:
+```
+file=PROseq_sob_template.sh
+SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts
+
+for i in *PE1.fastq
+do
+nm=$(echo $i | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.')
+fq=$(echo $i | rev | cut -f 1 -d '/' | rev)
+echo $nm
+echo $fq
+sed -e "s/XXXXXXX/${fq}/g" "${SCRIPTS}/${file}" > ${SCRIPTS}/${nm}_seqOutBias.sh
+sbatch ${SCRIPTS}/${nm}_seqOutBias.sh
+done
+```
+
+Special for this time: run on all the H9 files together.
+"""
+I think you can use a list of the BAM files, no need to combine.
+x=$(ls *bam)
+use $x as the input for seqOutBias
+"""
+```
+x=$(ls *bam)
+
+seqOutBias $genome $x --no-scale --stranded --bed-stranded-positive \
+    --bw=$name.bigWig --bed=$name.bed --out-split-pairends --only-paired \
+    --tail-edge --read-size=$read_size
+```
+
+Just submit directly from command line.
+
+## 4th chunk: final metrics
+```
+echo "Counting reads in pause region"
+coverageBed -counts -s -a $annotation_prefix.pause.bed -b ${name}_not_scaled_PE1.bed | \
+	awk '$7>0' | sort -k5,5 -k7,7nr | sort -k5,5 -u > ${name}_pause.bed
+
+echo "Discarding anything with chr and strand inconsistencies"
+join -1 5 -2 5 ${name}_pause.bed $annotation_prefix.bed | \
+	awk '{OFS="\t";} $2==$8 && $6==$12 {print $2, $3, $4, $1, $6, $7, $9, $10}' | \
+	awk '{OFS="\t";} $5 == "+" {print $1,$2+480,$8,$4,$6,$5} $5 == "-" {print $1,$7,$2 - 380,$4,$6,$5}' | \
+	awk '{OFS="\t";} $3>$2 {print $1,$2,$3,$4,$5,$6}' > ${name}_pause_counts_body_coordinates.bed
+
+echo "Getting coverage from pause count coordinates"
+coverageBed -counts -s -a ${name}_pause_counts_body_coordinates.bed \
+	-b ${name}_not_scaled_PE1.bed | awk '$7>0' | \
+	awk '{OFS="\t";} {print $1,$2,$3,$4,$5,$6,$7,$5/100,$7/($3 - $2)}' | \
+	awk '{OFS="\t";} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$8/$9}' > ${name}_pause_body.bed
+
+echo "Calculating pause indices and plotting as PDF"
+pause_index.R ${name}_pause_body.bed
+
+echo "Counting introns"
+coverageBed -counts -s -a $annotation_prefix.introns.bed \
+	-b ${name}_not_scaled_PE1.bed | awk '$7>0' | \
+	awk '{OFS="\t";} {print $1,$2,$3,$5,$5,$6,$7,($3 - $2)}' > ${name}_intron_counts.bed
+
+echo "Counting exons"
+coverageBed -counts -s -a $annotation_prefix.no.first.exons.named.bed \
+	-b ${name}_not_scaled_PE1.bed | awk '$7>0' | \
+	awk '{OFS="\t";} {print $1,$2,$3,$4,$4,$6,$7,($3 - $2)}' > ${name}_exon_counts.bed
+
+echo "***** Estimating nascent RNA purity with exon/intron density ratio *****"
+exon_intron_ratio.R ${name}_exon_counts.bed ${name}_intron_counts.bed
+
+echo "***** Script complete *****"
+```
+Interactive:
+```
+file=PROseq_final-metrics_template.sh
+SCRIPTS=/home/FCAM/jdong/H9_HDACi_PROseq/scripts
+
+for i in *PE1.fastq
+do
+nm=$(echo $i | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.')
+fq=$(echo $i | rev | cut -f 1 -d '/' | rev)
+echo $nm
+echo $fq
+sed -e "s/XXXXXXX/${fq}/g" "${SCRIPTS}/${file}" > ${SCRIPTS}/${nm}_finals.sh
+sbatch ${SCRIPTS}/${nm}_finals.sh
+done
+```
+
+## Merge QC scripts
+```
+cat *_QC_metrics.txt | awk '!x[$0]++' > H9_HDACi_QC_metrics.txt
+plot_all_metrics.R H9_HDACi_QC_metrics.txt H9_HDACi_PRO-seq_final
+```
+
+## Last chunk: cleanup intermediate files and rezip
+```
+#! /usr/bin/bash
+
+directory=/home/FCAM/jdong/H9_HDACi_PROseq/data
+
+cd $directory
+
+for i in *_PE1.fastq
+do
+# name stuff
+name=$(echo $i | awk -F "_PE1.fastq" '{print $1}')
+echo "Cleaning up ${name}"
+echo "Removing unneccesary intermediate files"
+rm ${name}_PE1_short.fastq
+rm ${name}_PE2_short.fastq
+rm ${name}_PE1_noadap.fastq
+rm ${name}_PE2_noadap.fastq
+rm ${name}_PE1_noadap_trimmed.fastq
+rm ${name}_PE1_dedup.fastq
+rm ${name}_PE1_processed.fastq
+rm ${name}_PE2_processed.fastq
+rm ${name}_PE1_noadap.fastq.paired.fq
+rm ${name}_PE2_noadap.fastq.paired.fq
+rm ${name}_PE1_noadap.fastq.single.fq
+rm ${name}_PE2_noadap.fastq.single.fq
+rm ${name}_PE1.rDNA.fastq.paired.fq
+rm ${name}_PE1.rDNA.fastq.single.fq
+rm ${name}_PE2_processed.fastq.paired.fq
+rm ${name}_PE2_processed.fastq.single.fq
+rm ${name}.extendedFrags.fastq.gz
+rm ${name}.notCombined_1.fastq.gz
+rm ${name}.notCombined_2.fastq.gz
+
+echo "Re-zipping original FASTQ files"
+gzip ${name}_PE1.fastq
+gzip ${name}_PE2.fastq
+done
+```
+
+# Visualization
+
+## Separate merged PE2 BED file into plus/minus and add tracklines
+```
+# Split BED files by strand
+awk '{OFS="\t";} $6=="+" {print $1,$2,$3,$5}' H9_HDACi_merged_not_scaled_PE2.bed > H9_HDACi_merged_not_scaled_PE2_minus_no-header.bedgraph
+awk '{OFS="\t";} $6=="-" {print $1,$2,$3,$5}' H9_HDACi_merged_not_scaled_PE2.bed > H9_HDACi_merged_not_scaled_PE2_plus_no-header.bedgraph
+
+# Add tracklines
+awk 'BEGIN {print "track type=bedGraph name=H9_HDACi_plus description=\"H9_HDACi_plus\" visibility=full autoScale=on alwaysZero=on color=0,0,255 windowingFunction=maximum" } \
+    {print $0}' H9_HDACi_merged_not_scaled_PE2_plus_no-header.bedgraph > H9_HDACi_merged_PE2_plus.bedgraph
+
+awk 'BEGIN {print "track type=bedGraph name=H9_HDACi_minus description=\"H9_HDACi_minus\" visibility=full autoScale=on alwaysZero=on color=255,0,0 windowingFunction=maximum" } \
+    {print $0}' H9_HDACi_merged_not_scaled_PE2_minus_no-header.bedgraph > H9_HDACi_merged_PE2_minus.bedgraph  
+
+# Zip bedGraphs for better quality of life 
+gzip H9_HDACi_merged_PE2*.bedgraph
+
+# sftp bedGraphs to local machine and check md5 sums
+```
+
+## Genome browser session
+
+Link:
+[https://genome.ucsc.edu/s/jhdong/H9_HDACi_merged](https://genome.ucsc.edu/s/jhdong/H9_HDACi_merged)
+
+Positions for various highly expressed genes:
+
+ACTN1 [-]: chr14:68,979,279-68,979,318
+HSP90 [-]: chr14:102,087,015-102,087,053
+
+GAPDH [+]: chr12:6,534,514-6,534,543 
+ATF1 [+]: chr12:50,764,093-50,764,136
+
+Minus-oriented genes have pileup starting on the 1st base of the gene, but\
+plus-oriented genes seem to have pileup starting about 9-10 bases into the gene,\
+is this typical? No.
+
+
+Look for reads that align to ATF1.
+region: "chr12:50,764,101-50,764,451"
+```
+samtools index H9_DMSO_rep1.bam
+samtools view -b -o H9_DMSO_rep1_ATF1.bam H9_DMSO_rep1.bam "chr12:50,764,101-50,764,451"
+samtools view H9_DMSO_rep1_ATF1.bam | grep -w 50764101
+# Just looking at the output from this, there are at least 19 reads that map to the beginning of 
+# the ATF1 gene at the TSS, but there are only 4 hits in the merged bedgraph. Hmm...
+```
+
+Reads that align to positive strand:
+SRR10669536.2003896
+sequence? AGTAGCGGCCCTGACTGCCGAGGAAACGG
+
+From raw FASTQ: 
+$ grep -A 1 -w SRR10669536.2003896 H9_DMSO_rep1_PE2.fastq
+@SRR10669536.2003896 2003896 length=38
+AGTAGCGGCCCTGACTGCCGAGGAAACGGTAGCTTAGG
++SRR10669536.2003896 2003896 length=38
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE
+
+$ grep -A 1 -w SRR10669536.2003896 H9_DMSO_rep1_PE1.fastq
+@SRR10669536.2003896 2003896 length=45
+GTAGCGATGTCCTAAGCTACCGTTTCCTCGGCAGTCAGGGCCGCT
++SRR10669536.2003896 2003896 length=45
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+
+If I just made my own PE1 read (reverse complemented from reading off genome browser):
+5' TO 3':
+TTAGGACAGTTGGCTGTTAAGTGACACTGATTCTCCCC
+
+@SRR10669536.2003896 2003896 length=38
+GGGGAGAATCAGTGTCACTTAACAGCCAACTGTCCTAA
++@SRR10669536.2003896 2003896 length=38
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE
+
+Oh that one's downstream. If I need an upstream one:
+5' TO 3':
+CCTACCCCAAACGCACACTAGTGCTCAGTTTTGCCCCC
+
+Reverse comp?
+@SRR10669536.2003896 2003896 length=38
+GGGGGCAAAACTGAGCACTAGTGTGCGTTTGGGGTAGG
++SRR10669536.2003896 2003896 length=38
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE
+
+# Troubleshooting
+
+Trying two methods to get accurate pileups:
+
+## Method 1
+From [TSSInference/old](https://github.com/guertinlab/TSSinference/blob/master/old/process_raw_PRO.sh) on Github:
+	* Start with BAMs from existing pipeline
+		* Actually: check if the bams I have are similar or different to the first set of bams produced in this older pipeline. Especially be careful of if strands are reverse complemented
+	* Run line 67: separate bam into a PE2-only BAM
+	* Run lines 70-77: 
+		* Filter by flags: exclude reads unmapped to reverse strand  (-F 20) and label these "plus strand"
+		* Filter by flags: (-f 0x10) read reverse strands label as "minus"
+		* Re-align to hg38 but with plus and minus separately
+	* Run lines 79, 81: run seqOutBias on plus and minus PE2 BAMs
+	* Visualize on genome browser
+
+## Method 2
+	* In 4.5: still trim UMI_length from end (-e) of PE2 reads, but DO NOT REVERSE COMPLEMENT
+	* Filter out rDNA
+	* Align PE2-only reads (-U for unaligned) to hg38
+	* Run PE2-only bams through seqOutBias with only these options:
+		* --stranded
+		* --bed-stranded-positive
+		* --read-size=30
+
+
+
+
+
+
