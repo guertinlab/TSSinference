@@ -145,7 +145,22 @@ seqOutBias hg38.fa ${minuspe2files} --no-scale --bw=${cellline}_PE2_combined_pro
 seqOutBias hg38.fa ${pluspe2files} --no-scale --bw=${cellline}_PE2_combined_pro_minus.bigWig --read-size=30
 
 
+# first exons for TSS inference
 
+wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.annotation.gtf.gz
+gunzip gencode.v31.annotation.gtf.gz
+
+
+# get the first exons for protein coding genes
+grep 'transcript_type "protein_coding"' gencode.v31.annotation.gtf | \
+    awk '{if($3=="exon"){print $0}} ' | \
+    grep -w "exon_number 1" | \
+    cut -f1,4,5,7,9 | tr ";" "\t" | \
+    awk '{for(i=5;i<=NF;i++){if($i~/^gene_name/){a=$(i+1)}} print $1,$2,$3,a,"na",$4}' | \
+    tr " " "\t" | tr -d '"' > gencode.hg38.firstExon.bed
+
+
+gzip gencode.hg38.firstExon.bed
 
 
 #mappability
