@@ -89,7 +89,7 @@ TSSinference <- function(bed, bw.plus, bw.minus, tssWin = 100, top.num.peaks = 2
     bwPlus = load.bigWig(bw.plus)
     bwMinus = load.bigWig(bw.minus)
 
-    x.beds = bed6.step.bpQuery.bigWig(bwPlus, bwMinus, bed, step = 1, with.attributes = TRUE)
+    x.beds = bed6.step.bpQuery.bigWig(bwPlus, bwMinus, bed, abs.value = TRUE, step = 1, with.attributes = TRUE)
 
 
     v = lapply(x.beds, top.num, top.num.peaks = top.num.peaks, low.limit.tss.counts = low.limit.tss.counts)
@@ -127,15 +127,15 @@ TSSinference <- function(bed, bw.plus, bw.minus, tssWin = 100, top.num.peaks = 2
     upstream.x = upstream.bed(one.peak.bed.transform, denWin)
 
     up.density = bed6.region.bpQuery.bigWig(bwPlus, bwMinus, upstream.x,
-                                            op = "avg", abs.value = FALSE, gap.value = 0, bwMap = NULL)
+                                            op = "avg", abs.value = TRUE, gap.value = 0, bwMap = NULL)
     
     downstream.x = downstream.bed(one.peak.bed.transform, denWin)
     
     down.density = bed6.region.bpQuery.bigWig(bwPlus, bwMinus, downstream.x,
-                                              op = "avg", abs.value = FALSE, gap.value = 0, bwMap = NULL)
+                                              op = "avg", abs.value = TRUE, gap.value = 0, bwMap = NULL)
     
     peak.height= bed6.region.bpQuery.bigWig(bwPlus, bwMinus, one.peak.bed.transform,
-                                            op = "sum", abs.value = FALSE, gap.value = 0, bwMap = NULL)
+                                            op = "sum", abs.value = TRUE, gap.value = 0, bwMap = NULL)
 
 #use this TRUE FALSE vector and ifelse to default to upstream most or assign a new TSS
 #first make them all the upstream most tss, then update it
@@ -182,15 +182,15 @@ TSSinference <- function(bed, bw.plus, bw.minus, tssWin = 100, top.num.peaks = 2
     upstream.x = upstream.bed(df.two.peaks, denWin)
     
     up.density = bed6.region.bpQuery.bigWig(bwPlus, bwMinus, upstream.x,
-                                        op = "avg", abs.value = FALSE, gap.value = 0, bwMap = NULL)
+                                        op = "avg", abs.value = TRUE, gap.value = 0, bwMap = NULL)
     
     downstream.x = downstream.bed(df.two.peaks, denWin)
     
     down.density = bed6.region.bpQuery.bigWig(bwPlus, bwMinus, downstream.x,
-                                          op = "avg", abs.value = FALSE, gap.value = 0, bwMap = NULL)
+                                          op = "avg", abs.value = TRUE, gap.value = 0, bwMap = NULL)
     
     peak.height= bed6.region.bpQuery.bigWig(bwPlus, bwMinus, df.two.peaks,
-                                        op = "sum", abs.value = FALSE, gap.value = 0, bwMap = NULL)
+                                        op = "sum", abs.value = TRUE, gap.value = 0, bwMap = NULL)
 
                                         #next filter based on the density
                                         #find all genes that are present in the original data frame, but not present in this 
