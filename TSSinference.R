@@ -112,8 +112,8 @@ TSSinference <- function(bed, bw.plus, bw.minus, tssWin = 100, top.num.peaks = 2
 #    print(head(one.peak.bed, 20))
 
     # two.peaks is actually all genes with 2+ peaks
-    two.peaks = w[!is.na(w[,3]),]
-    two.peaks.bed = bed[!is.na(w[,3]),] # gets annotated exon 1 boundaries for each of these genes
+    two.peaks = w[!is.na(w[,2]),]
+    two.peaks.bed = bed[!is.na(w[,2]),] # gets annotated exon 1 boundaries for each of these genes
     # create table where each gene is followed by its peak location columns
     all.two.peaks.bed = cbind(two.peaks.bed, two.peaks)
     
